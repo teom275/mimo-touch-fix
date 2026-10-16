@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>EasyDeck - Touch Controller</title>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: #131b2e;
+      --card-border: #1f2d4a;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Bar */
+    header {
+      height: 52px;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--card-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: -0.5px;
+    }
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #6366f1, #a855f7);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    }
+
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 8px var(--danger);
+    }
+    .status-dot.connected {
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+    }
+
+    .clock {
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-muted);
+    }
+
+    .header-btns {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-icon:active {
+      transform: scale(0.92);
+      background: #334155;
+    }
+    .btn-icon.active {
+      background: #4f46e5;
+      border-color: #818cf8;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    }
+
+    /* Page Navigation */
+    .pages-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 4px 0;
+    }
+    .page-tab {
+      padding: 3px 12px;
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .page-tab.active {
+      background: #3b82f6;
+      border-color: #60a5fa;
+      color: #fff;
+    }
+
+    /* Deck Grid Container */
+    main {
+      flex: 1;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(2, 1fr);
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    @media (min-aspect-ratio: 16/9) and (min-width: 900px) {
+      main {
+        grid-template-columns: repeat(4, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+      }
+    }
+
+    /* Touch Button */
+    .deck-btn {
+      position: relative;
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.1s ease, border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    .deck-btn:active {
+      transform: scale(0.95);
+      filter: brightness(1.2);
+    }
+
+    .deck-btn .icon-box {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.2s;
+    }
+
+    .deck-btn .icon-box svg {
+      width: 28px;
+      height: 28px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .deck-btn .label {
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: center;
+      padding: 0 8px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .deck-btn .badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.6);
+      display: none;
+    }
+
+    /* Button Color Themes */
+    .deck-btn.color-indigo { border-color: #4f46e5; }
+    .deck-btn.color-indigo .icon-box { color: #818cf8; background: rgba(79, 70, 229, 0.15); }
+    .deck-btn.color-red { border-color: #dc2626; }
+    .deck-btn.color-red .icon-box { color: #f87171; background: rgba(220, 38, 38, 0.15); }
+    .deck-btn.color-emerald { border-color: #059669; }
+    .deck-btn.color-emerald .icon-box { color: #34d399; background: rgba(5, 150, 105, 0.15); }
+    .deck-btn.color-blue { border-color: #2563eb; }
+    .deck-btn.color-blue .icon-box { color: #60a5fa; background: rgba(37, 99, 235, 0.15); }
+    .deck-btn.color-amber { border-color: #d97706; }
+    .deck-btn.color-amber .icon-box { color: #fbbf24; background: rgba(217, 119, 6, 0.15); }
+    .deck-btn.color-purple { border-color: #9333ea; }
+    .deck-btn.color-purple .icon-box { color: #c084fc; background: rgba(147, 51, 234, 0.15); }
+    .deck-btn.color-cyan { border-color: #0891b2; }
+    .deck-btn.color-cyan .icon-box { color: #22d3ee; background: rgba(8, 145, 178, 0.15); }
+    .deck-btn.color-pink { border-color: #db2777; }
+    .deck-btn.color-pink .icon-box { color: #f472b6; background: rgba(219, 39, 119, 0.15); }
+
+    /* Active / Glowing state (Recording, Streaming, Active Scene, Muted) */
+    .deck-btn.is-active {
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.6);
+      border-color: #818cf8;
+      background: #1e1e38;
+    }
+    .deck-btn.is-active .badge {
+      display: block;
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    .deck-btn.is-danger-active {
+      box-shadow: 0 0 22px rgba(239, 68, 68, 0.7);
+      border-color: #ef4444;
+      background: #2a1215;
+    }
+    .deck-btn.is-danger-active .badge {
+      display: block;
+      background: #ef4444;
+      color: #fff;
+      animation: pulse 1.2s infinite;
+    }
+
+    .deck-btn.is-muted {
+      border-color: #ef4444;
+      background: #201015;
+    }
+    .deck-btn.is-muted .icon-box {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.2);
+    }
+    .deck-btn.is-muted .badge {
+      display: block;
+      background: #ef4444;
+      color: #fff;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Edit Mode Overlay on Button */
+    .edit-mode .deck-btn {
+      position: relative;
+      border-style: dashed;
+    }
+    .edit-pencil {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: #f59e0b;
+      color: #000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      pointer-events: none;
+    }
+    .edit-mode .edit-pencil {
+      display: flex;
+    }
+
+    /* Modals */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 90%;
+      max-width: 520px;
+      max-height: 90vh;
+      background: #182238;
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    }
+
+    .modal-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .form-control {
+      background: #0f172a;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      color: #fff;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .form-control:focus {
+      border-color: #6366f1;
+    }
+
+    .color-picker {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .color-choice {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.15s;
+    }
+    .color-choice.selected {
+      border-color: #fff;
+      transform: scale(1.15);
+    }
+
+    .icon-picker {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      max-height: 140px;
+      overflow-y: auto;
+      background: #0f172a;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid var(--card-border);
+    }
+    .icon-choice {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      cursor: pointer;
+      background: #1e293b;
+      border: 1px solid transparent;
+    }
+    .icon-choice.selected {
+      border-color: #6366f1;
+      background: #312e81;
+    }
+    .icon-choice svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 8px;
+    }
+    .btn {
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .btn-secondary {
+      background: #334155;
+      color: #fff;
+    }
+    .btn-primary {
+      background: #4f46e5;
+      color: #fff;
+    }
+    .btn-danger {
+      background: #dc2626;
+      color: #fff;
+      margin-right: auto;
+    }
+    .btn:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5"></rect>
+          <path d="m9 12 2 2 4-4"></path>
+        </svg>
+      </div>
+      <span>EasyDeck</span>
+    </div>
+
+    <!-- Page Tabs -->
+    <div class="pages-bar">
+      <button class="page-tab active" data-page="0">Pág 1</button>
+      <button class="page-tab" data-page="1">Pág 2</button>
+    </div>
+
+    <div class="status-group">
+      <!-- OBS Status Pill -->
+      <div class="status-pill" id="obsStatusPill" title="Click para configurar OBS WebSocket">
+        <div class="status-dot" id="obsDot"></div>
+        <span id="obsText">OBS</span>
+      </div>
+
+      <!-- Clock -->
+      <div class="clock" id="clockText">12:00:00</div>
+
+      <div class="header-btns">
+        <!-- Edit Mode Toggle -->
+        <button class="btn-icon" id="btnEditMode" title="Modo Edición (Personalizar botones)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+        </button>
+
+        <!-- Settings / Reset / Export -->
+        <button class="btn-icon" id="btnSettings" title="Opciones y Ajustes">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 8-Button Grid (4x2 on 1024x640) -->
+  <main id="deckGrid"></main>
+
+  <!-- Button Edit Modal -->
+  <div class="modal-backdrop" id="editModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span>Personalizar Botón</span>
+        <button class="btn-icon" id="btnCloseEditModal">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label>Etiqueta / Nombre del Botón:</label>
+        <input type="text" id="editLabel" class="form-control" placeholder="Ej: Micrófono">
+      </div>
+
+      <div class="form-group">
+        <label>Tipo de Acción:</label>
+        <select id="editActionType" class="form-control">
+          <optgroup label="🎬 OBS Studio">
+            <option value="obs:mute">🎙️ OBS: Mutear / Desmutear Mic</option>
+            <option value="obs:scene">🎬 OBS: Cambiar Escena</option>
+            <option value="obs:record">🔴 OBS: Grabar / Detener</option>
+            <option value="obs:stream">📡 OBS: Transmitir (En Vivo)</option>
+          </optgroup>
+          <optgroup label="🎵 Multimedia y Música">
+            <option value="media:playpause">⏯️ Play / Pausa (Música)</option>
+            <option value="media:next">⏭️ Siguiente Canción</option>
+            <option value="media:prev">⏮️ Canción Anterior</option>
+          </optgroup>
+          <optgroup label="🔊 Volumen y Sistema">
+            <option value="volume:up">🔊 Subir Volumen (+5%)</option>
+            <option value="volume:down">🔉 Bajar Volumen (-5%)</option>
+            <option value="volume:mute">🔇 Mutear / Desmutear Audio</option>
+          </optgroup>
+          <optgroup label="🌐 Enlaces">
+            <option value="nav:url">🌐 Abrir Página Web (URL)</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <div class="form-group" id="groupActionArg">
+        <label id="lblActionArg">Nombre de la Escena / Micrófono:</label>
+        <input type="text" id="editActionArg" class="form-control" placeholder="Dejar vacío para el predeterminado">
+      </div>
+
+      <div class="form-group">
+        <label>Color del Botón:</label>
+        <div class="color-picker" id="colorPickerContainer"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Ícono:</label>
+        <div class="icon-picker" id="iconPickerContainer"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="btnDeleteBtn">Borrar</button>
+        <button class="btn btn-secondary" id="btnCancelEdit">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveEdit">Guardar Cambios</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings / OBS Modal -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-box">
+      <div class="modal-title">
+        <span>Ajustes de EasyDeck</span>
+        <button class="btn-icon" id="btnCloseSettingsModal">&times;</button>
+      </div>
+
+      <div class="form-group">
+        <label>Servidor OBS WebSocket:</label>
+        <input type="text" id="obsHost" class="form-control" value="localhost:4455" placeholder="localhost:4455">
+      </div>
+
+      <div class="form-group">
+        <label>Contraseña OBS WebSocket (si tiene):</label>
+        <input type="password" id="obsPassword" class="form-control" placeholder="Opcional (dejar vacío si no configuraste contraseña)">
+      </div>
+
+      <div class="form-group">
+        <label>Sonido al pulsar botones:</label>
+        <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; margin-top: 4px; cursor: pointer;">
+          <input type="checkbox" id="chkAudioFeedback" checked> Sonido táctil activado
+        </label>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label>Respaldo de Configuración:</label>
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <button class="btn btn-secondary" id="btnExportConfig" style="flex: 1;">📥 Exportar</button>
+          <button class="btn btn-secondary" id="btnImportConfig" style="flex: 1;">📤 Importar</button>
+          <input type="file" id="fileImportInput" style="display: none;" accept=".json">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="btnResetDefaults">Restablecer Todo</button>
+        <button class="btn btn-primary" id="btnSaveSettings">Guardar y Reconectar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =====================================================================
+       ICONS REPOSITORY (SVGs)
+       ===================================================================== */
+    const ICONS = {
+      mic: `<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`,
+      micOff: `<svg viewBox="0 0 24 24"><line x1="2" x2="22" y1="2" y2="22"/><path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/><path d="M5 10v2a7 7 0 0 0 12 5"/><path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12"/><line x1="12" x2="12" y1="19" y2="22"/></svg>`,
+      video: `<svg viewBox="0 0 24 24"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>`,
+      camera: `<svg viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>`,
+      record: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="currentColor"/></svg>`,
+      radio: `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/><path d="M7.8 7.8c-2.3 2.3-2.3 6.1 0 8.5"/><path d="M4.9 4.9C1 8.8 1 15.1 4.9 19"/></svg>`,
+      play: `<svg viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3" fill="currentColor"/></svg>`,
+      pause: `<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor"/><rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor"/></svg>`,
+      next: `<svg viewBox="0 0 24 24"><polygon points="5 4 15 12 5 20 5 4" fill="currentColor"/><line x1="19" x2="19" y1="5" y2="19"/></svg>`,
+      prev: `<svg viewBox="0 0 24 24"><polygon points="19 20 9 12 19 4 19 20" fill="currentColor"/><line x1="5" x2="5" y1="5" y2="19"/></svg>`,
+      volUp: `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>`,
+      volDown: `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`,
+      volMute: `<svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/></svg>`,
+      music: `<svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>`,
+      monitor: `<svg viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>`,
+      game: `<svg viewBox="0 0 24 24"><line x1="6" x2="10" y1="12" y2="12"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="15" x2="15.01" y1="13" y2="13"/><line x1="18" x2="18.01" y1="11" y2="11"/><rect width="20" height="12" x="2" y="6" rx="2"/></svg>`,
+      message: `<svg viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>`,
+      sparkles: `<svg viewBox="0 0 24 24"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>`,
+      link: `<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`
+    };
+
+    const COLORS = [
+      { id: "indigo", bg: "#4f46e5" },
+      { id: "blue", bg: "#2563eb" },
+      { id: "emerald", bg: "#059669" },
+      { id: "amber", bg: "#d97706" },
+      { id: "red", bg: "#dc2626" },
+      { id: "purple", bg: "#9333ea" },
+      { id: "pink", bg: "#db2777" },
+      { id: "cyan", bg: "#0891b2" }
+    ];
+
+    /* =====================================================================
+       DEFAULT PRESETS (8 buttons per page)
+       ===================================================================== */
+    const DEFAULT_PAGES = [
+      // Page 1: OBS & Quick Media
+      [
+        { id: "b1", label: "Micrófono", action: "obs:mute", arg: "", color: "red", icon: "mic" },
+        { id: "b2", label: "Escena 1", action: "obs:scene", arg: "Escena 1", color: "indigo", icon: "video" },
+        { id: "b3", label: "Escena 2", action: "obs:scene", arg: "Escena 2", color: "purple", icon: "camera" },
+        { id: "b4", label: "Grabar", action: "obs:record", arg: "", color: "red", icon: "record" },
+        { id: "b5", label: "En Vivo", action: "obs:stream", arg: "", color: "amber", icon: "radio" },
+        { id: "b6", label: "Play / Pausa", action: "media:playpause", arg: "", color: "emerald", icon: "play" },
+        { id: "b7", label: "Volumen +", action: "volume:up", arg: "", color: "blue", icon: "volUp" },
+        { id: "b8", label: "Volumen -", action: "volume:down", arg: "", color: "blue", icon: "volDown" }
+      ],
+      // Page 2: Audio & Media controls
+      [
+        { id: "b9", label: "Mutear Audio", action: "volume:mute", arg: "", color: "red", icon: "volMute" },
+        { id: "b10", label: "Anterior", action: "media:prev", arg: "", color: "emerald", icon: "prev" },
+        { id: "b11", label: "Siguiente", action: "media:next", arg: "", color: "emerald", icon: "next" },
+        { id: "b12", label: "Chat / Juego", action: "obs:scene", arg: "Juego", color: "pink", icon: "game" },
+        { id: "b13", label: "Cámara Grande", action: "obs:scene", arg: "Camara", color: "cyan", icon: "camera" },
+        { id: "b14", label: "YouTube", action: "nav:url", arg: "https://youtube.com", color: "red", icon: "link" },
+        { id: "b15", label: "Spotify", action: "nav:url", arg: "https://open.spotify.com", color: "emerald", icon: "music" },
+        { id: "b16", label: "Pantalla Completa", action: "obs:scene", arg: "Pantalla", color: "indigo", icon: "monitor" }
+      ]
+    ];
+
+    /* =====================================================================
+       STATE MANAGEMENT
+       ===================================================================== */
+    let currentPage = 0;
+    let isEditMode = false;
+    let pages = JSON.parse(localStorage.getItem("easydeck_pages")) || DEFAULT_PAGES;
+    let settings = JSON.parse(localStorage.getItem("easydeck_settings")) || {
+      obsHost: "localhost:4455",
+      obsPassword: "",
+      audioFeedback: true
+    };
+
+    let editingBtnIndex = null;
+    let selectedColor = "indigo";
+    let selectedIcon = "mic";
+
+    // Audio synthesizer for touch feedback
+    let audioCtx = null;
+    function playTapSound(freq = 600, duration = 0.04) {
+      if (!settings.audioFeedback) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    /* =====================================================================
+       OBS WEBSOCKET V5 CLIENT
+       ===================================================================== */
+    class ObsClient {
+      constructor() {
+        this.ws = null;
+        this.isConnected = false;
+        this.requestId = 0;
+        this.callbacks = new Map();
+        this.state = {
+          currentScene: "",
+          recording: false,
+          streaming: false,
+          micMuted: false
+        };
+      }
+
+      connect() {
+        if (this.ws) {
+          try { this.ws.close(); } catch(e){}
+        }
+
+        const url = `ws://${settings.obsHost || "localhost:4455"}`;
+        console.log("Connecting to OBS:", url);
+        updateObsStatus(false, "Conectando...");
+
+        try {
+          this.ws = new WebSocket(url);
+        } catch (e) {
+          this.scheduleReconnect();
+          return;
+        }
+
+        this.ws.onopen = () => {
+          console.log("OBS WS Open");
+        };
+
+        this.ws.onmessage = (msg) => {
+          try {
+            const data = JSON.parse(msg.data);
+            this.handleMessage(data);
+          } catch(e) { console.error(e); }
+        };
+
+        this.ws.onclose = () => {
+          this.isConnected = false;
+          updateObsStatus(false, "OBS Desconectado");
+          this.scheduleReconnect();
+        };
+
+        this.ws.onerror = () => {
+          this.isConnected = false;
+        };
+      }
+
+      scheduleReconnect() {
+        setTimeout(() => {
+          if (!this.isConnected) this.connect();
+        }, 3000);
+      }
+
+      handleMessage(data) {
+        // Op 0: Hello -> Identify
+        if (data.op === 0) {
+          this.sendIdentify(data.d);
+          return;
+        }
+
+        // Op 2: Identified -> Connected!
+        if (data.op === 2) {
+          this.isConnected = true;
+          updateObsStatus(true, "OBS Conectado");
+          this.fetchInitialStatus();
+          return;
+        }
+
+        // Op 5: Event
+        if (data.op === 5) {
+          this.handleEvent(data.d.eventType, data.d.eventData);
+          return;
+        }
+
+        // Op 7: RequestResponse
+        if (data.op === 7 && data.d.requestId) {
+          const cb = this.callbacks.get(data.d.requestId);
+          if (cb) {
+            cb(data.d);
+            this.callbacks.delete(data.d.requestId);
+          }
+        }
+      }
+
+      sendIdentify(helloData) {
+        // If password is required, handle challenge
+        let auth = undefined;
+        if (helloData.authentication && settings.obsPassword) {
+          // Future: optional sha256 auth if password set
+        }
+
+        this.ws.send(JSON.stringify({
+          op: 1,
+          d: {
+            rpcVersion: 1,
+            authentication: auth
+          }
+        }));
+      }
+
+      sendRequest(type, data = {}) {
+        if (!this.isConnected) return Promise.reject("Not connected to OBS");
+        return new Promise((resolve) => {
+          const reqId = "req_" + (++this.requestId);
+          this.callbacks.set(reqId, resolve);
+          this.ws.send(JSON.stringify({
+            op: 6,
+            d: {
+              requestType: type,
+              requestId: reqId,
+              requestData: data
+            }
+          }));
+        });
+      }
+
+      fetchInitialStatus() {
+        // Current Program Scene
+        this.sendRequest("GetCurrentProgramScene").then(res => {
+          if (res?.responseData?.currentProgramSceneName) {
+            this.state.currentScene = res.responseData.currentProgramSceneName;
+            renderDeck();
+          }
+        });
+
+        // Record Status
+        this.sendRequest("GetRecordStatus").then(res => {
+          if (res?.responseData) {
+            this.state.recording = res.responseData.outputActive;
+            renderDeck();
+          }
+        });
+
+        // Stream Status
+        this.sendRequest("GetStreamStatus").then(res => {
+          if (res?.responseData) {
+            this.state.streaming = res.responseData.outputActive;
+            renderDeck();
+          }
+        });
+      }
+
+      handleEvent(type, data) {
+        if (type === "CurrentProgramSceneChanged") {
+          this.state.currentScene = data.sceneName;
+          renderDeck();
+        } else if (type === "RecordStateChanged") {
+          this.state.recording = data.outputActive;
+          renderDeck();
+        } else if (type === "StreamStateChanged") {
+          this.state.streaming = data.outputActive;
+          renderDeck();
+        } else if (type === "InputMuteStateChanged") {
+          this.state.micMuted = data.inputMuted;
+          renderDeck();
+        }
+      }
+    }
+
+    const obs = new ObsClient();
+
+    function updateObsStatus(connected, text) {
+      const dot = document.getElementById("obsDot");
+      const label = document.getElementById("obsText");
+      if (connected) {
+        dot.classList.add("connected");
+      } else {
+        dot.classList.remove("connected");
+      }
+      label.innerText = text;
+    }
+
+    /* =====================================================================
+       SYSTEM & MEDIA API (Calls local companion server)
+       ===================================================================== */
+    function callSystemApi(endpoint) {
+      fetch(`/api/${endpoint}`, { method: "POST" })
+        .then(r => r.json())
+        .catch(err => {
+          console.warn("Companion server not reachable, running in standalone mode:", err);
+        });
+    }
+
+    /* =====================================================================
+       BUTTON CLICK HANDLER
+       ===================================================================== */
+    function handleButtonClick(btn, index) {
+      playTapSound();
+
+      if (isEditMode) {
+        openEditModal(index);
+        return;
+      }
+
+      const [category, action] = btn.action.split(":");
+
+      if (category === "obs") {
+        if (!obs.isConnected) {
+          alert("OBS no está conectado. Abre OBS Studio y verifica que 'Herramientas > Ajustes del servidor WebSocket' esté activado.");
+          return;
+        }
+
+        if (action === "scene") {
+          if (btn.arg) obs.sendRequest("SetCurrentProgramScene", { sceneName: btn.arg });
+        } else if (action === "record") {
+          obs.sendRequest("ToggleRecord");
+        } else if (action === "stream") {
+          obs.sendRequest("ToggleStream");
+        } else if (action === "mute") {
+          const input = btn.arg || undefined;
+          if (input) {
+            obs.sendRequest("ToggleInputMute", { inputName: input });
+          } else {
+            // Default mic toggle
+            obs.sendRequest("GetSpecialInputs").then(res => {
+              const mic = res?.responseData?.mic1 || "Mic/Aux";
+              obs.sendRequest("ToggleInputMute", { inputName: mic });
+            }).catch(() => {
+              obs.sendRequest("ToggleInputMute", { inputName: "Mic/Aux" });
+            });
+          }
+        }
+      } else if (category === "media") {
+        callSystemApi(`media/${action}`);
+      } else if (category === "volume") {
+        callSystemApi(`volume/${action}`);
+      } else if (category === "nav") {
+        if (btn.arg) window.open(btn.arg, "_blank");
+      }
+    }
+
+    /* =====================================================================
+       RENDER GRID
+       ===================================================================== */
+    function renderDeck() {
+      const grid = document.getElementById("deckGrid");
+      grid.innerHTML = "";
+
+      const currentButtons = pages[currentPage] || [];
+
+      // Ensure 8 buttons per page
+      while (currentButtons.length < 8) {
+        currentButtons.push({
+          id: "b_" + Math.random().toString(36).substring(7),
+          label: "Vacío",
+          action: "obs:scene",
+          arg: "",
+          color: "indigo",
+          icon: "sparkles"
+        });
+      }
+
+      currentButtons.forEach((btn, index) => {
+        const el = document.createElement("div");
+        el.className = `deck-btn color-${btn.color || 'indigo'}`;
+
+        let iconSvg = ICONS[btn.icon] || ICONS.sparkles;
+        let badgeText = "";
+        let isDanger = false;
+        let isActive = false;
+        let isMuted = false;
+
+        // Dynamic State mapping
+        if (btn.action === "obs:scene" && btn.arg && obs.state.currentScene === btn.arg) {
+          isActive = true;
+          badgeText = "ACTIVA";
+        } else if (btn.action === "obs:record" && obs.state.recording) {
+          isDanger = true;
+          badgeText = "GRABANDO";
+        } else if (btn.action === "obs:stream" && obs.state.streaming) {
+          isDanger = true;
+          badgeText = "EN VIVO";
+        } else if (btn.action === "obs:mute" && obs.state.micMuted) {
+          isMuted = true;
+          iconSvg = ICONS.micOff;
+          badgeText = "MUTED";
+        }
+
+        if (isActive) el.classList.add("is-active");
+        if (isDanger) el.classList.add("is-danger-active");
+        if (isMuted) el.classList.add("is-muted");
+
+        el.innerHTML = `
+          <div class="edit-pencil">✎</div>
+          <span class="badge">${badgeText}</span>
+          <div class="icon-box">${iconSvg}</div>
+          <span class="label">${btn.label}</span>
+        `;
+
+        el.addEventListener("click", () => handleButtonClick(btn, index));
+        grid.appendChild(el);
+      });
+    }
+
+    /* =====================================================================
+       EDIT MODAL LOGIC
+       ===================================================================== */
+    function initEditModal() {
+      // Build color choices
+      const colorContainer = document.getElementById("colorPickerContainer");
+      colorContainer.innerHTML = "";
+      COLORS.forEach(c => {
+        const choice = document.createElement("div");
+        choice.className = "color-choice";
+        choice.style.background = c.bg;
+        choice.dataset.color = c.id;
+        choice.addEventListener("click", () => {
+          document.querySelectorAll(".color-choice").forEach(x => x.classList.remove("selected"));
+          choice.classList.add("selected");
+          selectedColor = c.id;
+        });
+        colorContainer.appendChild(choice);
+      });
+
+      // Build icon choices
+      const iconContainer = document.getElementById("iconPickerContainer");
+      iconContainer.innerHTML = "";
+      Object.keys(ICONS).forEach(iconKey => {
+        const choice = document.createElement("div");
+        choice.className = "icon-choice";
+        choice.dataset.icon = iconKey;
+        choice.innerHTML = ICONS[iconKey];
+        choice.addEventListener("click", () => {
+          document.querySelectorAll(".icon-choice").forEach(x => x.classList.remove("selected"));
+          choice.classList.add("selected");
+          selectedIcon = iconKey;
+        });
+        iconContainer.appendChild(choice);
+      });
+
+      // Action type changed
+      document.getElementById("editActionType").addEventListener("change", (e) => {
+        updateActionArgLabel(e.target.value);
+      });
+
+      // Save button
+      document.getElementById("btnSaveEdit").addEventListener("click", () => {
+        if (editingBtnIndex === null) return;
+        const currentButtons = pages[currentPage];
+        currentButtons[editingBtnIndex] = {
+          id: currentButtons[editingBtnIndex].id,
+          label: document.getElementById("editLabel").value || "Botón",
+          action: document.getElementById("editActionType").value,
+          arg: document.getElementById("editActionArg").value.trim(),
+          color: selectedColor,
+          icon: selectedIcon
+        };
+        savePages();
+        closeModals();
+        renderDeck();
+      });
+
+      // Delete button
+      document.getElementById("btnDeleteBtn").addEventListener("click", () => {
+        if (editingBtnIndex === null) return;
+        pages[currentPage][editingBtnIndex] = {
+          id: "b_" + Math.random().toString(36).substring(7),
+          label: "Vacío",
+          action: "obs:scene",
+          arg: "",
+          color: "indigo",
+          icon: "sparkles"
+        };
+        savePages();
+        closeModals();
+        renderDeck();
+      });
+
+      document.getElementById("btnCancelEdit").addEventListener("click", closeModals);
+      document.getElementById("btnCloseEditModal").addEventListener("click", closeModals);
+    }
+
+    function updateActionArgLabel(actionType) {
+      const grp = document.getElementById("groupActionArg");
+      const lbl = document.getElementById("lblActionArg");
+      const input = document.getElementById("editActionArg");
+
+      if (actionType === "obs:scene") {
+        grp.style.display = "flex";
+        lbl.innerText = "Nombre exacto de la Escena:";
+        input.placeholder = "Ej: Escena 1, Just Chatting, Juego";
+      } else if (actionType === "obs:mute") {
+        grp.style.display = "flex";
+        lbl.innerText = "Nombre del Micrófono (dejar vacío para Default):";
+        input.placeholder = "Ej: Mic/Aux o vacío";
+      } else if (actionType === "nav:url") {
+        grp.style.display = "flex";
+        lbl.innerText = "Dirección Web (URL):";
+        input.placeholder = "https://...";
+      } else {
+        grp.style.display = "none";
+      }
+    }
+
+    function openEditModal(index) {
+      editingBtnIndex = index;
+      const btn = pages[currentPage][index];
+
+      document.getElementById("editLabel").value = btn.label;
+      document.getElementById("editActionType").value = btn.action;
+      document.getElementById("editActionArg").value = btn.arg || "";
+      updateActionArgLabel(btn.action);
+
+      selectedColor = btn.color || "indigo";
+      selectedIcon = btn.icon || "sparkles";
+
+      document.querySelectorAll(".color-choice").forEach(x => {
+        x.classList.toggle("selected", x.dataset.color === selectedColor);
+      });
+      document.querySelectorAll(".icon-choice").forEach(x => {
+        x.classList.toggle("selected", x.dataset.icon === selectedIcon);
+      });
+
+      document.getElementById("editModal").classList.add("open");
+    }
+
+    function closeModals() {
+      document.querySelectorAll(".modal-backdrop").forEach(x => x.classList.remove("open"));
+    }
+
+    function savePages() {
+      localStorage.setItem("easydeck_pages", JSON.stringify(pages));
+    }
+
+    /* =====================================================================
+       SETTINGS MODAL
+       ===================================================================== */
+    function initSettingsModal() {
+      document.getElementById("btnSettings").addEventListener("click", () => {
+        document.getElementById("obsHost").value = settings.obsHost || "localhost:4455";
+        document.getElementById("obsPassword").value = settings.obsPassword || "";
+        document.getElementById("chkAudioFeedback").checked = settings.audioFeedback !== false;
+        document.getElementById("settingsModal").classList.add("open");
+      });
+
+      document.getElementById("obsStatusPill").addEventListener("click", () => {
+        document.getElementById("btnSettings").click();
+      });
+
+      document.getElementById("btnCloseSettingsModal").addEventListener("click", closeModals);
+
+      document.getElementById("btnSaveSettings").addEventListener("click", () => {
+        settings.obsHost = document.getElementById("obsHost").value.trim() || "localhost:4455";
+        settings.obsPassword = document.getElementById("obsPassword").value;
+        settings.audioFeedback = document.getElementById("chkAudioFeedback").checked;
+        localStorage.setItem("easydeck_settings", JSON.stringify(settings));
+        closeModals();
+        obs.connect();
+      });
+
+      document.getElementById("btnResetDefaults").addEventListener("click", () => {
+        if (confirm("¿Seguro que quieres restablecer todos los botones a los valores iniciales?")) {
+          pages = JSON.parse(JSON.stringify(DEFAULT_PAGES));
+          savePages();
+          closeModals();
+          renderDeck();
+        }
+      });
+
+      // Export
+      document.getElementById("btnExportConfig").addEventListener("click", () => {
+        const json = JSON.stringify({ pages, settings }, null, 2);
+        const blob = new Blob([json], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "easydeck-config.json";
+        a.click();
+      });
+
+      // Import
+      document.getElementById("btnImportConfig").addEventListener("click", () => {
+        document.getElementById("fileImportInput").click();
+      });
+
+      document.getElementById("fileImportInput").addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (data.pages) pages = data.pages;
+            if (data.settings) settings = data.settings;
+            savePages();
+            localStorage.setItem("easydeck_settings", JSON.stringify(settings));
+            alert("¡Configuración cargada correctamente!");
+            closeModals();
+            renderDeck();
+            obs.connect();
+          } catch(err) {
+            alert("Archivo de configuración inválido.");
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    /* =====================================================================
+       CLOCK & APP INITIALIZATION
+       ===================================================================== */
+    function updateClock() {
+      const now = new Date();
+      document.getElementById("clockText").innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    // Page tabs
+    document.querySelectorAll(".page-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".page-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        currentPage = parseInt(tab.dataset.page, 10);
+        renderDeck();
+      });
+    });
+
+    // Edit mode toggle
+    const btnEdit = document.getElementById("btnEditMode");
+    btnEdit.addEventListener("click", () => {
+      isEditMode = !isEditMode;
+      btnEdit.classList.toggle("active", isEditMode);
+      document.body.classList.toggle("edit-mode", isEditMode);
+    });
+
+    // Run
+    initEditModal();
+    initSettingsModal();
+    renderDeck();
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Auto connect OBS
+    obs.connect();
+  </script>
+</body>
+</html>
